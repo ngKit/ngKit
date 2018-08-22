@@ -11,10 +11,9 @@ export class Event {
     /**
      * Get an event listener.
      *
-     * @param  {string} key
-     * @return {Observable>}
+     * @param  key
      */
-    static channel(key: string): Subject<any> {
+    static channel(key: any): Subject<any> {
         if (typeof Event.channels[key] === 'undefined') {
             Event.channels[key] = new Subject<any>();
         }
@@ -25,7 +24,7 @@ export class Event {
     /**
      * Set multiple event channels.
      *
-     * @param {Array} events
+     * @param events
      */
     setChannels(channels: string[]): void {
         channels.forEach((channel) => Event.channel(channel));
@@ -33,8 +32,6 @@ export class Event {
 
     /**
      * Broadcast an event to a channel.
-     *
-     * @return {void}
      */
     broadcast(key: string, data = {}): Promise<any> {
         return Promise.resolve(Event.channel(key).next(data));
@@ -43,8 +40,7 @@ export class Event {
     /**
      *  Listen on a channel for an event.s
      *
-     * @param  {string} key
-     * @return {Observable}
+     * @param  key
      */
     listen(key: string): Observable<any> {
         return Event.channel(key).asObservable();

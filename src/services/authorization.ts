@@ -1,13 +1,10 @@
 import { Injectable } from '@angular/core';
 import { PolicyModel } from './../models/index';
-import { Event } from './event';
 
 @Injectable()
 export class Authorization {
     /**
      * Active Policies
-     *
-     * @type {PolicyModel[]}
      */
     policies: PolicyModel[] = [];
 
@@ -19,9 +16,8 @@ export class Authorization {
     /**
      *  Add a policy to the service.
      *
-     * @param  {string} key
-     * @param  {any} value
-     * @return {boolean}
+     * @param  key
+     * @param  value
      */
     addPolicy(key: string, value?: any): boolean {
         if (this.policies.findIndex(policy => policy.name == key) < 0) {
@@ -48,9 +44,8 @@ export class Authorization {
     /**
      * Check the given policy.
      *
-     * @param  {string} name
-     * @param  {any} value
-     * @return {boolean}
+     * @param  name
+     * @param  value
      */
     checkPolicy(key: string, value: any = null): boolean {
         let check = false;
@@ -80,16 +75,15 @@ export class Authorization {
     /**
      *  Remove a policy that has already been defined.
      *
-     * @param  {string} key
-     * @param  {any} value
-     * @return {boolean}
+     * @param  key
+     * @param  value
      */
     removePolicy(key: string, value: any): boolean {
-        let policy = this.policies.find(policy => policy.name === name);
+        let policy = this.policies.find(policy => policy.name === key);
 
         if (policy && policy.objects.indexOf(value) >= 0) {
             let index = this.policies.findIndex(policy => policy.name === name);
-            let objectIndexs = [];
+            let objectIndexs: any[] = [];
 
             policy.objects.forEach((o, i) => {
                 if (o == value) {

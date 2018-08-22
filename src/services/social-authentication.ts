@@ -1,9 +1,8 @@
-import * as hello from 'hellojs';
-import { Authentication } from  './authentication';
+import { Authentication } from './authentication';
 import { Authorization } from './authorization';
 import { Injectable } from '@angular/core';
 import { Config } from './../config';
-import { Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { Http } from './http';
 import { Token } from './token';
 import { Event } from './event';
@@ -11,55 +10,38 @@ import { Event } from './event';
 @Injectable()
 export class SocialAuthentication extends Authentication {
     /**
-     * Hellojs provider.
-     *
-     * @type {HelloJSStatic}
-     */
-    private hello;
-
-    /**
      * Constructor.
      */
     constructor(
         public authorization: Authorization,
         public config: Config,
         public event: Event,
-        public http: Http,
+        public http: HttpClient,
+        public httpService: Http,
         public token: Token
     ) {
-        super(authorization, config, event, http, token);
+        super(authorization, config, event, http, httpService, token);
 
-        hello.init({
-            facebook: this.config.get('authentication.social.facebook.id'),
-            twitter: this.config.get('authentication.social.twitter.id')
-        }, {
-                redirect_uri: this.config.get('authentication.social.redirectTo'),
-                oauth_proxy: this.config.get('authentication.social.oauthProxy')
-            });
+        //
     }
 
     /**
      * Login with a social provider.
-     *
-     * @return {promise}
      */
-    login(provider: string, options?: any): Promise<any> {
-        return new Promise((resolve, reject) => {
-            hello(provider).login(options).then((res) => {
-                this.handleLoginSuccess(res).then((res) => {
-                    this.onLogin(res).then(() => resolve(res));
-                }, (error) => reject(this.handleLoginError(error)))
-            });
-        });
-    }
+    // login(provider: string, options?: any): Promise<any> {
+    //     return new Promise(() => {
+    //         // this.handleLoginSuccess(res).then((res) => {
+    //         //     this.onLogin(res).then(() => resolve(res));
+    //         // }, (error) => reject(this.handleLoginError(error)))
+    //     });
+    // }
 
     /**
      * Handle succesful Facebook login.
      *
-     * @param  {object} res
-     * @return {Promise}
+     * @param  res
      */
-    handleLoginSuccess(res): Promise<any> {
+    handleLoginSuccess(res: object): Promise<any> {
         return new Promise((resolve, reject) => {
             this.storeSocialCredentials(res);
 
@@ -77,18 +59,16 @@ export class SocialAuthentication extends Authentication {
     /**
      * Handle errors on facebook login.
      *
-     * @param  {object} error
-     * @return {void}
+     * @param  error
      */
-    handleLoginError = (error) => console.log(error);
+    handleLoginError = (error: object) => console.log(error);
 
     /**
      * Store social auth crednetials.
      *
-     * @param  {any} res
-     * @return {void}
+     * @param  res
      */
-    storeSocialCredentials(res): void {
+    storeSocialCredentials(res: any): void {
         if (res.network == 'facebook') {
             this.token.set(
                 res.authResponse.accessToken,

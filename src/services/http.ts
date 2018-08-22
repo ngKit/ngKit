@@ -1,141 +1,59 @@
-import { Component, Injectable } from '@angular/core';
-import {
-    Http as HTTP, Headers, Response, URLSearchParams
-} from '@angular/http';
-import { Observable } from 'rxjs';
+import { Injectable, OnDestroy } from '@angular/core';
 import { Config } from './../config';
 import { Event } from './event';
 import { Token } from './token';
+import { HttpHeaders, HttpParams } from '@angular/common/http';
 
 @Injectable()
-export class Http {
+export class Http implements OnDestroy {
     /**
-     * Assignable base url for http calls.
+     * Create a new instance of the service.
      *
-     * @type {string}
-     */
-    baseUrl: string = '';
-
-    /**
-     * Headers to be sent with all http calls.
-     *
-     * @type {any}
-     */
-    public headers: any;
-
-    /**
-     * Constructor.
-     *
-     * @param  {Http}   http
+     * @param  config
+     * @param  event
+     * @param  token
      */
     constructor(
-        public http: HTTP,
-        public config?: Config,
-        public event?: Event,
-        public token?: Token
+        public config: Config,
+        public event: Event,
+        public token: Token
     ) {
         this.setDefaultHeaders();
         this.eventListeners();
     }
 
     /**
-     * Event listeners.
-     *
-     * @return {void}
+     * Assignable base url for http calls.
      */
-    private eventListeners(): void {
-        if (this.event) {
-            this.event.listen('auth:loggingIn').subscribe(() => {
-                this.setDefaultHeaders();
-            });
-
-            this.event.listen('auth:loggedOut').subscribe(() => {
-                this.setDefaultHeaders();
-            });
-
-            this.event.listen('auth:check').subscribe(() => {
-                this.setDefaultHeaders();
-            });
-        }
-    }
+    baseUrl: string = '';
 
     /**
-     * Adds headers to http requests.
-     *
-     * @param  {Headers} headers Angular header provider
-     * @return {Headers}
-
+     * Headers to be sent with all http calls.
      */
-    createHeaders(headers: Headers): Headers {
-        let configHeaders = (this.config) ? this.config.get('http.headers') : null;
-
-        if (configHeaders) {
-            Object.keys(configHeaders).forEach(key => {
-                headers.append(key, configHeaders[key]);
-            });
-        }
-
-        headers = this.tokenHeader(headers);
-
-        return headers;
-    }
+    public headers: HttpHeaders = new HttpHeaders();
 
     /**
-     * Add a token header to the request.
-     *
-     * @param  {Headers} headers
-     * @return {Headers}
+     * The subsciptions of the service.
      */
-    tokenHeader(headers: Headers): Headers {
-        if (this.config && this.config.get('authentication.method.token')) {
-            this.token.get().then(token => {
-                let scheme = this.config.get('token.scheme');
-                let headerValue = (scheme) ? `${scheme} ${token}` : token;
-                headers.append('Authorization', headerValue);
-            }, error => { })
-        }
-
-        return headers;
-    }
+    subs: any = {};
 
     /**
-     * Set the default headers for http request.
-     *
-     * @return {void}
+     * On service destroy.
      */
-    setDefaultHeaders(): void {
-        let headers = new Headers();
-        headers = this.createHeaders(headers);
-        this.headers = headers;
-    }
-
-    /**
-     * Add headers to created headers.
-     *
-     * @param headers
-     * @return {Headers}
-     */
-    addHeaders(headers): Headers {
-        let currentHeaders = this.headers;
-
-        Object.keys(headers).forEach(key => {
-            currentHeaders.set(key, headers[key]);
-        });
-
-        return currentHeaders;
+    ngOnDestroy(): void {
+        Object.keys(this.subs).forEach(k => this.subs[k].unsubscribe());
     }
 
     /**
      * Build url parameters for requests.
      *
-     * @param  {object} params
-     * @return {URLSearchParams}
+     * @param  params
      */
-    buildParams(params): URLSearchParams {
-        var query_params = new URLSearchParams();
+    buildParams(params: any): HttpParams {
+        var query_params = new HttpParams();
 
         if (params) {
-            Object.keys(params).forEach((key) => {
+            Object.keys(params).forEach((key: any) => {
                 if (params[key]) query_params.set(key, params[key]);
             });
         }
@@ -144,164 +62,61 @@ export class Http {
     }
 
     /**
-     * Get location for http request.
-     *
-     * @param  {string} url
-     * @return {string}
+     * Event listeners.
      */
-    private getLocation(url): string {
+    private eventListeners(): void {
+        if (this.event) {
+            let sub = () => this.setDefaultHeaders();
+            this.subs['auth:loggingIn'] = this.event.listen('auth:loggingIn').subscribe(sub);
+            this.subs['auth:loggedOut'] = this.event.listen('auth:loggedOut').subscribe(sub);
+            this.subs['auth:check'] = this.event.listen('auth:check').subscribe(sub);
+        }
+    }
+
+    /**
+     * Get url for http request.
+     *
+     * @param  url
+     */
+    public getUrl(url: string): string {
+        if (url.startsWith('/') || url.startsWith('http')) return url;
+
         let baseUrl = this.baseUrl || this.config.get('http.baseUrl') || '';
 
         return (baseUrl) ? baseUrl + '/' + url : url;
     }
 
     /**
-     * Perform a GET http request to API.
-     *
-     * @param  {string} url
-     * @param  {object} params
-     * @param  {object} headers
-     * @return {Observable<any>}
+     * Set the default headers for http request.
      */
-    get(url, params?, headers = {}): Observable<any> {
-        return this.http.get(this.getLocation(url), {
-            headers: this.addHeaders(headers),
-            search: this.buildParams(params)
-        }).map(res => res.json()).catch(this.handleError.bind(this));
+    setDefaultHeaders(): void {
+        let configHeaders = (this.config) ? this.config.get('http.headers') : null;
+
+        if (configHeaders) {
+            Object.keys(configHeaders).forEach(key => {
+                this.headers = this.headers.set(key, configHeaders[key]);
+            });
+        }
+
+        this.tokenHeader();
     }
 
     /**
-    * Perform a POST http request.
-    *
-    * @param  {string} url
-    * @param  {object} data Data to pass to the API
-    * @param  {object} headers
-    * @return {Observable<any>}
-    */
-    post(url: string, data: any, headers = {}): Observable<any> {
-        return this.http.post(this.getLocation(url), JSON.stringify(data), {
-            headers: this.addHeaders(headers)
-        }).map(res => res.json()).catch(this.handleError.bind(this));
-    }
-
-    /**
-     * Perform a file upload via POST.
-     *
-     * @param  {string} url
-     * @param  {File[]} files
-     * @param  {object} options
-     * @return {Observable}
+     * Add a token header to the request.
      */
-    postFile(url: string, files: any[], options = {}): Observable<any> {
-        let defaultOptions = { inputName: 'file[]' };
-        let fileOptions = Object.assign(defaultOptions, options);
-
-        return Observable.create(observer => {
-            let formData: FormData = new FormData();
-            let xhr: XMLHttpRequest = new XMLHttpRequest();
-
-            if (typeof files == 'object') {
-                files = Object.keys(files).map(key => files[key]);
-            }
-
-            if (Array.isArray(files)) {
-                files.forEach((file, i) => {
-                    formData.append(fileOptions.inputName, file, file.name)
+    tokenHeader(): Promise<any> {
+        return new Promise((resolve) => {
+            if (this.config && this.config.get('authentication.method.token')) {
+                this.token.get().then(token => {
+                    let scheme = this.config.get('token.scheme');
+                    let value = (scheme) ? `${scheme} ${token}` : token;
+                    this.headers = this.headers.set('Authorization', value);
+                    resolve(token ? true : false);
+                }, () => {
+                    this.headers = this.headers.delete('Authorization');
+                    resolve(false);
                 });
             }
-
-            xhr.onreadystatechange = () => {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        observer.next(JSON.parse(xhr.response));
-                        observer.complete();
-                    } else {
-                        observer.error(xhr.response);
-                    }
-                }
-            };
-
-            // TODO: Add Progress
-            // xhr.upload.onprogress = (event) => {
-            //     this.progress = Math.round(event.loaded / event.total * 100);
-            //
-            //     this.progressObserver.next(this.progress);
-            // };
-
-            xhr.open('POST', this.getLocation(url), true);
-
-            this.headers.keys().forEach((header) => {
-                if (header.toLowerCase() != 'content-type') {
-                    xhr.setRequestHeader(header, this.headers.get(header));
-                }
-            });
-
-            xhr.send(formData);
-        });
-    }
-
-    /**
-    * Perform a PUT http request.
-    *
-    * @param  {string} url
-    * @param  {object} data
-    * @param  {object} headers
-    * @return {Observable}
-    */
-    put(url: string, data: any, headers = {}): Observable<any> {
-        return this.http.put(this.getLocation(url), JSON.stringify(data), {
-            headers: this.addHeaders(headers)
-        }).map(res => res.json()).catch(this.handleError.bind(this));
-    }
-
-    /**
-    * Perform a PATCH http request.
-    *
-    * @param  {string} url
-    * @param  {object} data
-    * @param  {object} headers
-    * @return {Observable}
-    */
-    patch(url: string, data: any, headers = {}): Observable<any> {
-        return this.http.patch(this.getLocation(url), JSON.stringify(data), {
-            headers: this.addHeaders(headers)
-        }).map(res => res.json()).catch(this.handleError.bind(this));
-    }
-
-    /**
-    * Perform a DELETE http request.
-    *
-    * @param  {string} url
-    * @param  {object} headers
-    * @return {Observable}
-    */
-    delete(url: string, headers = {}): Observable<any> {
-        return this.http.delete(this.getLocation(url), {
-            headers: this.addHeaders(headers)
-        }).map(res => res.json()).catch(this.handleError.bind(this));
-    }
-
-    /**
-     * Catch errors from response.
-     *
-     * @param {objet} error Response
-     * @return {object} Observable
-     */
-    private handleError(response: Response) {
-        let error = null;
-
-        if (this.config && this.config.get('debug')) {
-            console.error(response);
-        }
-
-        if (typeof response.json === 'function') {
-            error = Object.assign(response, response.json());
-        }
-
-        if (response.status === 401 && this.event) {
-            this.event.broadcast('auth:required', error);
-        }
-
-        return Observable.throw(error);
+        })
     }
 }

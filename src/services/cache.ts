@@ -1,24 +1,24 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { CacheItemModel } from '../models/index';
 import { Storage } from './storage';
 import { Config } from './../config';
 import { Event } from './event';
 
+interface CacheInterface {
+    [key: string]: CacheItemModel;
+}
+
 @Injectable()
-export class Cache {
+export class Cache implements OnDestroy {
     /**
      * The name of the cache instance.
-     *
-     * @type {string}
      */
     cacheName: string = 'ngkit_cache';
 
     /**
      * In memory collection of cache.
-     *
-     * @type {string}
      */
-    private _cache = {};
+    private _cache: CacheInterface = {};
 
     /**
      * Constructor.
@@ -30,16 +30,27 @@ export class Cache {
     ) {
         this.retrieveCache();
 
-        this.event.listen('auth:loggedOut').subscribe(() => {
-            this._cache = {};
-            this.clear();
-        });
+        this.subs['auth:loggedOut'] = this.event.listen('auth:loggedOut')
+            .subscribe(() => {
+                this._cache = {};
+                this.clear();
+            });
+    }
+
+    /**
+     * The subsciptions of the service.
+     */
+    subs: any = {};
+
+    /**
+     * On service destroy.
+     */
+    ngOnDestroy(): void {
+        Object.keys(this.subs).forEach(k => this.subs[k].unsubscribe());
     }
 
     /**
      * Retrieve the stored cache.
-     *
-     * @return {any}
      */
     protected retrieveCache(): Promise<any> {
         return new Promise((resolve, reject) => {
@@ -55,16 +66,15 @@ export class Cache {
                 }
 
                 resolve(this.cache);
-            });
+            }, err => reject(err));
         });
     }
 
     /**
      * Save the cache to storage.
      *
-     * @param  {string} key
-     * @param  {any} value
-     * @return {any}
+     * @param  key
+     * @param  value
      */
     store(): any {
         this.storage.set(this.cacheName, this._cache);
@@ -74,8 +84,6 @@ export class Cache {
 
     /**
      * Accessor to the in memeory cache.
-     *
-     * @return {any}
      */
     get cache(): any {
         return this._cache;
@@ -92,9 +100,8 @@ export class Cache {
     /**
      * Get an item from cache.
      *
-     * @param  {string} key
-     * @param  {any} defautValue
-     * @return {any}
+     * @param   key
+     * @param  defautValue
      */
     get(key: string, defautValue: any = null): any {
         if (this.cache[key] && !this.cache[key].isExpired()) {
@@ -111,19 +118,16 @@ export class Cache {
     /**
      * Set an item to cache.
      *
-     * @param  {string} key
-     * @param  {any} value
-     * @param  {number}
-     * @return {void}
+     * @param  key
+     * @param  value
+     * @param  expires
      */
     set(
         key: string,
         value: any,
         expires: number = this.config.get('cache.expires')
     ): void {
-        let cacheItem = new CacheItemModel({
-            value: value, expires: expires
-        });
+        let cacheItem = new CacheItemModel({ value: value, expires: expires });
 
         this._cache[key] = cacheItem;
 
@@ -133,7 +137,7 @@ export class Cache {
     /**
      * Remove an item from cache.
      *
-     * @param {string} key
+     * @param key
      */
     remove(key: string): void {
         delete this.cache[key];
@@ -150,8 +154,7 @@ export class Cache {
     /**
      * Get an item from cache and remove it.
      *
-     * @param  {string} key
-     * @return {any}
+     * @param  key
      */
     pull(key: string): any {
         let value = this.get(key);
@@ -163,8 +166,7 @@ export class Cache {
     /**
      * Check if cache has an item.
      *
-     * @param  {string} key
-     * @return {boolean}
+     * @param  key
      */
     has(key: string): boolean {
         return this.get(key) !== null ? true : false;
