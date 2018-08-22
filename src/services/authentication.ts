@@ -281,17 +281,21 @@ export class Authentication implements OnDestroy {
      * @param  data
      * @param   endpoint
      * @param  headers
+     * @param postRegisterLogin
      */
-    register(data: object, endpoint: string = '', headers = {}): Promise<any> {
+    register(data: object, endpoint: string = '', headers = {}, postRegisterLogin: boolean = false): Promise<any> {
         endpoint = this.config.get('authentication.endpoints.register', endpoint);
-
         return new Promise((resolve, reject) => {
             this.http.post(endpoint, data, headers).toPromise().then(res => {
-                this.onLogin(res).then(() => {
-                    resolve(res);
+                if (postRegisterLogin) {
+                    this.onLogin(res).then(() => {
+                        resolve(res);
 
+                        this.event.broadcast('auth:registered', res);
+                    }, error => reject(error));
+                } else {
                     this.event.broadcast('auth:registered', res);
-                }, error => reject(error));
+                }
             }, error => reject(error));;
         });
     }
