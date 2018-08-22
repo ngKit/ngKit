@@ -1,6 +1,6 @@
 {
     "name": "ngkit",
-    "version": "0.9.991",
+    "version": "0.10.0",
     "description": "",
     "typings": "dist/index.d.ts",
     "$schema": "./node_modules/ng-packagr/package.schema.json",
@@ -23,14 +23,14 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/ngKit/ngKit.git"
+        "url": "git+https://github.com/hanekedesign/ngKit.git"
     },
     "author": "Thiery Laverdure",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/ngKit/ngKit/issues"
+        "url": "https://github.com/hanekedesign/ngKit/issues"
     },
-    "homepage": "https://github.com/ngKit/ngKit#readme",
+    "homepage": "https://github.com/hanekedesign/ngKit#readme",
     "dependencies": {
         "localforage": "^1.5.0",
         "lodash": "^4.17.4",
